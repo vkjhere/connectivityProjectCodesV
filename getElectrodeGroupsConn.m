@@ -38,7 +38,7 @@ for e=1:numElectrodes
     for b = 1:nbins % number of bins
         electrodeGroupList{e,nbins-b+1} = find(binned_fitx == b);
         if e==1
-            groupNameList{nbins-b+1} = [num2str(binEdges(b)) '<x<' num2str(binEdges(b+1))];
+            groupNameList{nbins-b+1} = [num2str(binEdges(b)) '< cos \theta <' num2str(binEdges(b+1))];
         end
     end
 end
@@ -57,7 +57,7 @@ end
 function out_theta = angl_dist(in_theta_ref,in_theta,val)
 if(strcmp(val,'a')) % azimuth (addressing Cz issue)
     if(in_theta_ref > 90)
-    in_theta(24) = 90
+    in_theta(24) = 90;
     elseif(in_theta_ref < -90)
         in_theta(24) = -90;
     end
