@@ -72,7 +72,7 @@ function runComparePPCbetweenProtocols()
       
         %refElectrodes = [16 17 18 48]; % back occipital
         groupType = 'rel';
-        cutoffList = [1 20];
+        cutoffList = [2 25];
         pairedSubjectNameList = getPairedSubjectsBK1;            
         subjectNameLists{1} = pairedSubjectNameList(:,1);
         subjectNameLists{2} = pairedSubjectNameList(:,2);
@@ -138,14 +138,14 @@ hConn = axesArray;
 for m=1:numElectrodeGroups
     if strcmp(subjectsChoice, 'med')
     dataToPlot{1} = squeeze(connDataElectrodeGroup1{1}(:,m,:)); % med, protocol 1
-    dataToPlot{1} = dataToPlot{1}(:,freqValsPosNoLineNoise); % to avoid line noise points
-    dataToPlot{2} = squeeze(connDataElectrodeGroup2{1}(:,m,:)); % med , prot 2
+    dataToPlot{1} = dataToPlot{1}(:,freqValsPosNoLineNoise); % _________to avoid line noise points
+    dataToPlot{2} = squeeze(connDataElectrodeGroup2{1}(:,m,:)); % med , protocol 2
     dataToPlot{2} = dataToPlot{2}(:,freqValsPosNoLineNoise); 
     else
     dataToPlot{1} = squeeze(connDataElectrodeGroup1{2}(:,m,:)); % con, protocol 1
-    dataToPlot{1} = dataToPlot{1}(freqValsPosNoLineNoise); % to avoid line noise points
+    dataToPlot{1} = dataToPlot{1}(:,freqValsPosNoLineNoise); % to avoid line noise points
     dataToPlot{2} = squeeze(connDataElectrodeGroup2{2}(:,m,:)); % con , prot 2
-    dataToPlot{2} = dataToPlot{2}(freqValsPosNoLineNoise); 
+    dataToPlot{2} = dataToPlot{2}(:,freqValsPosNoLineNoise); 
     end
     
     if displayDataFlag
