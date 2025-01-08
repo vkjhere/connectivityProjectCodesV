@@ -1,5 +1,7 @@
-% This GUI helps compare PPC vs freq between 2 protocols.
+% This GUI helps compare PPC vs freq between stimulus and baseline for a
+% given protocol
 function runComparePPCbetweenSt_Bl()
+ 
     % Create the GUI
     fig = figure('Name', 'PPC comparision between stimulus and baseline', 'NumberTitle', 'off', ...
                  'Position', [50, 100, 800, 600]);
@@ -65,6 +67,7 @@ function runComparePPCbetweenSt_Bl()
         %refElectrodes = [16 17 18 48]; % back occipital
         groupType = 'rel';
         cutoffList = [2 25];
+        displaySignificanceFlag = 0;
         pairedSubjectNameList = getPairedSubjectsBK1;            
         subjectNameLists{1} = pairedSubjectNameList(:,1);
         subjectNameLists{2} = pairedSubjectNameList(:,2);
@@ -144,7 +147,7 @@ for m=1:numElectrodeGroups
         % Connectivity as a function of frequency__________________
    displaySettings.colorNames(1,:) = [0 1 0]; % green for protocol 1
    displaySettings.colorNames(2,:) =  [1 0 0]; % red for protocol 2
-        displayAndcompareData(hConn(m), dataToPlot,freqVals,displaySettings,yLims,1,useMedianFlag,~pairedDataFlag);
+        displayAndcompareData(hConn(m), dataToPlot,freqValsNoLineNoise,displaySettings,yLims,displaySignificanceFlag,useMedianFlag,~pairedDataFlag);
         sgtitle(["PPC of " + subjectsChoice + " during " + protocolName + " -- baseline and stimulus wrt elecs " + num2str(refElectrodes)]);
 
         title(groupNameList{m});
