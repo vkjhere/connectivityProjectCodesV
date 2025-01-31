@@ -21,60 +21,60 @@ function runComparePPCbetweenSt_Bl()
                                   'String', { 'G1', 'G2', 'M2' });
 
     % Dropdown for Reference Electrode Group
-    uicontrol('Parent', controlPanel, 'Style', 'text', 'Position', [550, 20, 190, 20], 'String', 'Reference Electrode Group:');
-    referenceDropdown = uicontrol('Parent', controlPanel, 'Style', 'popupmenu', 'Position', [750, 20, 120, 20], ...
+    uicontrol('Parent', controlPanel, 'Style', 'text', 'Position', [520, 20, 190, 20], 'String', 'Reference Electrode Group:');
+    referenceDropdown = uicontrol('Parent', controlPanel, 'Style', 'popupmenu', 'Position', [710, 20, 120, 20], ...
                                    'String', {'Left Occipital','Right Occipital','Back Occipital','Left Frontal', 'Right Frontal'});
-
+    % Dropdown for FreqRange
+    uicontrol('Parent', controlPanel, 'Style', 'text', 'Position', [850, 20, 190, 20], 'String', 'Freq Range:');
+    uicontrol('Parent', controlPanel, 'Style', 'edit', 'Position', [900, 20, 50, 20], 'String', '50', ...
+              'Tag', 'freqMin');
+    uicontrol('Parent', controlPanel, 'Style', 'edit', 'Position', [950, 20, 50, 20], 'String', '60', ...
+              'Tag', 'freqMax');
     % Plot Button
-    uicontrol('Parent', controlPanel, 'Style', 'pushbutton', 'Position', [950, 20, 80, 20], 'String', 'Plot', ...
+    uicontrol('Parent', controlPanel, 'Style', 'pushbutton', 'Position', [1150, 20, 80, 20], 'String', 'Plot', ...
               'Callback', @(~, ~) plotConnectivity());
-      % Clear Button
-    uicontrol('Parent', controlPanel, 'Style', 'pushbutton', 'Position', [1100, 20, 80, 20], 'String', 'Clear', ...
+
+%plot handles _______________________________________
+        hConnPPC = getPlotHandles(1,8,[0.05 0.4 0.6 0.45], 0.02, 0.01, 1);
+        hTopoRef = getPlotHandles(1,2,[0.66 0.55 0.32 0.3],0.002,0.002,1);
+        hTopo  = getPlotHandles(1,3,[0.1 0.05 0.5 0.3],0.02,0,1);
+        hConnDistance = getPlotHandles(1,1,[0.7 0.1 0.2 0.25],0.01,0.01,1);
+      % Clear Button____________________________________
+    uicontrol('Parent', controlPanel, 'Style', 'pushbutton', 'Position', [1300, 20, 80, 20], 'String', 'Clear', ...
               'Callback', @(~, ~) cla_Callback());
-
-
-    % Axes for Plots
-    axesArray = getPlotHandles(1,8,[0.05 0.1 0.9 0.65], 0.02, 0.01, 0);
-    for n = 1:8
-        axesArray(n) = subplot(1, 8, n, 'Parent', fig);
-        pos = get(axesArray(n), 'Position');
-        pos(2) = pos(2) - 0.05; % Adjust y-position downwards
-        set(axesArray(n), 'Position', pos);
-        title(axesArray(n), sprintf('Electrode Group %d', n));
-    
-    end
 
     % Plot Connectivity Function
     function plotConnectivity()
         % Get selected group, protocol, and analysis choice
         subjectsChoice = groupDropdown.Value;
         protocolName = protocolDropdown.Value;
-  
-  
         refElectrodes = referenceDropdown.Value;
+        freqMin = str2double(findobj('Tag', 'freqMin').String);
+        freqMax = str2double(findobj('Tag', 'freqMax').String);
+        freqRange = [freqMin, freqMax];
+
         % Map selections to actual strings
         subjectGroups = {'med', 'con'};
         protocols = {'EO1', 'EC1', 'G1', 'M1', 'G2', 'EO2', 'EC2', 'M2' };
-        
         refElectrodeGroups = {[14 44 47], [19 49 52], [16 17 18 48], [34 36 3],[62 63 30]};
+        freqRanges = {[7 10],[15 25],[60 90]};
+
         subjectsChoice = subjectGroups{subjectsChoice};
         protocolName = protocols{protocolName};
-        
-        
         refElectrodes = refElectrodeGroups{refElectrodes};
 
       
         %refElectrodes = [16 17 18 48]; % back occipital
         groupType = 'rel';
         cutoffList = [2 25];
-        displaySignificanceFlag = 0;
+        displaySignificanceFlag = 1;
         pairedSubjectNameList = getPairedSubjectsBK1;            
         subjectNameLists{1} = pairedSubjectNameList(:,1);
         subjectNameLists{2} = pairedSubjectNameList(:,2);
         pairedDataFlag      = 1;
        
-analysisChoice1 = 'bl';
-analysisChoice2 = 'st';
+analysisChoice1 = 'st';
+analysisChoice2 = 'bl';
 
 if ~exist('refElectrodes','var');         refElectrodes = [];           end
 if ~exist('groupType','var');             groupType='rel';              end
@@ -83,11 +83,12 @@ if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 
 if ~exist('freqRangeList','var')
-    freqRangeList{1} = [8 13]; % alpha
-    freqRangeList{2} = [20 34]; % SG
-    freqRangeList{3} = [35 65]; % FG
+    freqRangeList{1} = freqRange; % takes from GUI
+%     freqRangeList{2} = [20 34]; % SG
+%     freqRangeList{3} = [35 65]; % FG
 end
-
+numFreqRanges = length(freqRangeList);
+freqRangeColors = copper(numFreqRanges);
 
 if ~exist('axisRangeList','var')
     axisRangeList{1} = [0 100]; % freqLims
@@ -99,64 +100,130 @@ if ~exist('cutoffList','var')
 end
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
-if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;           end
+if ~exist('pairedDataFlag','var');        pairedDataFlag = 1;           end
 if ~exist('displayDataFlag','var');       displayDataFlag = 1;          end
 
 saveFolderName = 'savedData';
 capType = 'actiCap64_UOL';
 
- %function [dataToPlot,freqVals,connDataElectrodeGroup2,electrodeGroupList,groupNameList, binnedCenters] = fetchConnectivityData(groupChoice, protocolName1, analysisChoice)
-[~, ~,connDataElectrodeGroupSt,~,~, ~] = getConnDataAllSubjects(subjectNameLists,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,protocolName,analysisChoice1,cutoffList,pairedDataFlag,saveFolderName,capType);
-[~,freqVals,connDataElectrodeGroupBl,electrodeGroupList,groupNameList, ~] = getConnDataAllSubjects(subjectNameLists,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,protocolName,analysisChoice2,cutoffList,pairedDataFlag,saveFolderName,capType);
 
-%%% remove line noise %%%%
-lineNoiseRange = [46 54];
-lineNoiseFreqVals = 46:54;
-freqValsNoLineNoise = setdiff(freqVals, lineNoiseFreqVals); % No line noise now.
-freqValsPosNoLineNoise = find(ismember(freqVals, freqValsNoLineNoise));
+[connDataSt, ~,connDataElectrodeGroupSt,~,~, binnedCenters] = getConnDataAllSubjects(subjectNameLists,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,protocolName,analysisChoice1,cutoffList,pairedDataFlag,saveFolderName,capType);
+[connDataBl,freqVals,connDataElectrodeGroupBl,electrodeGroupList,groupNameList, ~] = getConnDataAllSubjects(subjectNameLists,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,protocolName,analysisChoice2,cutoffList,pairedDataFlag,saveFolderName,capType);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Display options %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 displaySettings.fontSizeLarge = 10;
 displaySettings.tickLengthMedium = [0.025 0];
 
 titleStr{1} = 'Stimulus ';
 titleStr{2} = 'Baseline ';
-%titleStr{3} = 'Med - Con';
+titleStr{3} = 'difference';
 freqLims = axisRangeList{1};
 yLims = axisRangeList{2};
 cLimsTopo = axisRangeList{3};
-numElectrodeGroups = length(electrodeGroupList);
-hConn = axesArray;
-%hConn = getPlotHandles(1,numElectrodeGroups,[0.05 0.1 0.9 0.75], 0.02, 0.01, 0);
-%%%%%%%%%%%%%%%%%%%%%%%%%%% Show Results %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Show Electrodes %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if displayDataFlag
+    % Display electrode positions
+    if strcmp(groupType,'rel')  
+        montageChanlocs = showElectrodeGroups(hTopoRef,capType,electrodeGroupList(1,:),groupNameList); % Just show for the first electrode
+    else
+        montageChanlocs = showElectrodeGroups(hTopoRef,capType,electrodeGroupList,groupNameList);
+    end
+end
+%%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
+freqPosList = cell(1,numFreqRanges);
+lineNoiseRange = [46 54];
+lineNoiseFreqVals = 46:54;
+badFreqPos = intersect(find(freqVals>=lineNoiseRange(1)),find(freqVals<=lineNoiseRange(2)));
+for i = 1:numFreqRanges
+    freqPosList{i} = setdiff(intersect(find(freqVals>=freqRangeList{i}(1)),find(freqVals<=freqRangeList{i}(2))),badFreqPos);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Show Results %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+numElectrodeGroups = length(electrodeGroupList);
 
 for m=1:numElectrodeGroups
     if strcmp(subjectsChoice, 'med')
-    dataToPlot{1} = squeeze(connDataElectrodeGroupSt{1}(:,m,:)); % med, protocol 1
-    dataToPlot{1} = dataToPlot{1}(:,freqValsPosNoLineNoise); % to avoid line noise points
-    dataToPlot{2} = squeeze(connDataElectrodeGroupBl{1}(:,m,:)); % med , prot 2
-    dataToPlot{2} = dataToPlot{2}(:,freqValsPosNoLineNoise);
+    dataToPlot{1} = squeeze(connDataElectrodeGroupSt{1}(:,m,:)); % med, St
+    dataToPlot{2} = squeeze(connDataElectrodeGroupBl{1}(:,m,:)); % med , Bl
     else
-    dataToPlot{1} = squeeze(connDataElectrodeGroupSt{2}(:,m,:)); % con, protocol 1
-    dataToPlot{1} = dataToPlot{1}(:,freqValsPosNoLineNoise);
-    dataToPlot{2} = squeeze(connDataElectrodeGroupBl{2}(:,m,:)); % con , prot 2
-    dataToPlot{2} = dataToPlot{2}(:,freqValsPosNoLineNoise);
+    dataToPlot{1} = squeeze(connDataElectrodeGroupSt{2}(:,m,:)); % con, st
+    dataToPlot{2} = squeeze(connDataElectrodeGroupBl{2}(:,m,:)); % con , bl
     end
     
     if displayDataFlag
         % Connectivity as a function of frequency__________________
-   displaySettings.colorNames(1,:) = [0 1 0]; % green for protocol 1
-   displaySettings.colorNames(2,:) =  [1 0 0]; % red for protocol 2
-        displayAndcompareData(hConn(m), dataToPlot,freqValsNoLineNoise,displaySettings,yLims,displaySignificanceFlag,useMedianFlag,~pairedDataFlag);
+   displaySettings.colorNames(1,:) = [0 1 0]; % green for St
+   displaySettings.colorNames(2,:) =  [1 0 0]; % red for Bl
+   displaySettings.colorNames(3,:) =  [0 0 0]; % black for diff
+
+        displayAndcompareData(hConnPPC(m), dataToPlot,freqVals,displaySettings,yLims,displaySignificanceFlag,useMedianFlag,~pairedDataFlag);
         sgtitle(["PPC of " + subjectsChoice + " during " + protocolName + " -- baseline and stimulus wrt elecs " + num2str(refElectrodes)]);
 
         title(groupNameList{m});
-        xlim(hConn(m),freqLims);
+        xlim(hConnPPC(m),freqLims);
+        if m==1
+        ylabel('PPC'); xlabel('frequency');
+        end
         for j=1:2
-            text(10,yLims(2)-0.1*j,[titleStr{j} '(' num2str(size(dataToPlot{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hConn(m));
+            text(10,yLims(2)-0.1*j,[titleStr{j} '(' num2str(size(dataToPlot{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hConnPPC(m));
             
         end
     end
+end
+ % Display topoplots______________________
+topoplotDataToReturn = cell(2,numFreqRanges);
+    if strcmp(subjectsChoice, 'med')
+            xtemp{1} = connDataSt{1}; % st for meditators
+            xtemp{2} = connDataBl{1}; % bl
+            xtemp{3} = xtemp{1} -xtemp{2}; % St - Bl
+    else 
+            xtemp{1} = connDataSt{2}; % st 
+            xtemp{2} = connDataBl{2}; % bl
+            xtemp{3} = xtemp{1} -xtemp{2}; % St - Bl
+    end
+for i=1:numFreqRanges
+
+    dataToCompare = cell(1,2);
+    % Topoplots_________
+
+    for j=1:3 % St, Bl, and difference
+            x = squeeze(mean(xtemp{j}(:,:,freqPosList{i}),3, 'omitnan'));
+            if useMedianFlag
+                data = squeeze(median(x,1,'omitnan'));
+            else
+                data = squeeze(mean(x,1,'omitnan'));
+            end
+        
+        topoplotDataToReturn{i,j} = data;
+
+        if displayDataFlag
+                axes(hTopo(i,j)); %#ok<*LAXES>
+                colormap('jet');
+                topoplot(data,montageChanlocs,'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
+                %(.., 'maplimits',cLimsTopo,..)
+                if i==1
+                title(titleStr{j},'color',displaySettings.colorNames(j,:));
+                end
+        end
+
+        % Conn versus distance_______________________
+        %x = squeeze(mean(connDataElectrodeGroupSt{j}(:,:,freqPosList{i}),3));
+          if strcmp(subjectsChoice, 'med')
+            dataToCompare{1} = squeeze(mean(connDataElectrodeGroupSt{1}(:,:,freqPosList{i}),3));
+            dataToCompare{2} = squeeze(mean(connDataElectrodeGroupBl{1}(:,:,freqPosList{i}),3));
+          else
+            dataToCompare{1} = squeeze(mean(connDataElectrodeGroupSt{2}(:,:,freqPosList{i}),3));
+            dataToCompare{2} = squeeze(mean(connDataElectrodeGroupBl{2}(:,:,freqPosList{i}),3));
+          end
+        
+   end
+%     flipdataToCompare = flip(dataToCompare);
+    displayAndcompareData(hConnDistance(i), dataToCompare, binnedCenters, displaySettings,yLims,1,useMedianFlag,~pairedDataFlag);
+            ylabel('PPC'); xlabel('cos\theta');
+        if i==1
+        title('PPC vs cos\theta');
+       end
 end
 end 
 
@@ -242,8 +309,10 @@ connData{3} = connData{1} - connData{2}; % diff: med-con
 connDataElectrodeGroup{3} = connDataElectrodeGroup{1} - connDataElectrodeGroup{2};
 end
 function cla_Callback(~,~)
-        claGivenPlotHandle(axesArray);
-        
+        claGivenPlotHandle(hConnPPC);
+        claGivenPlotHandle(hTopoRef);
+        claGivenPlotHandle(hTopo);
+        claGivenPlotHandle(hConnDistance);
 
         function claGivenPlotHandle(plotHandles)
             [numRows,numCols] = size(plotHandles);

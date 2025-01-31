@@ -1,3 +1,5 @@
+% plots Pairwise Phase Consistency (PPC)
+% It calls 'psdOnTopOfPPC' to add PSDs on top -scaled down and shifted up version to fit in the plots
 % subjectNameLists - 1x2 cell array containing subjectNames for meditators and controls
 % protocolName - one of EO1, EC1, G1, M1, G2, EC2, EO2, M2
 % analysisChoice - 'st', 'bl' or 'combined'
@@ -14,7 +16,9 @@ if ~exist('groupType','var');             groupType='rel';              end
 if ~exist('connMethod','var');            connMethod = 'ppc';           end
 if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
-
+if ~exist('refChoice', 'var');            refChoice = 'none';           end
+if ~exist('stRange','var');               stRange = [0.25 1.25];        end
+if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=1;  end
 if ~exist('freqRangeList','var')
     freqRangeList{1} = [8 13]; % alpha
     freqRangeList{2} = [20 34]; % SG
@@ -26,16 +30,25 @@ if ~exist('axisRangeList','var')
     axisRangeList{3} = [0 1]; % cLimsTopo
 end
 if ~exist('cutoffList','var')
-    cutoffList = [2 30]; % elcs & trials
+    cutoffList = [2 30]; % elecs & trials
 end
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 if ~exist('hAllPlots','var');             hAllPlots = [];               end
 if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;           end
 if ~exist('displayDataFlag','var');       displayDataFlag = 1;          end
-
 numFreqRanges = length(freqRangeList);
 freqRangeColors = copper(numFreqRanges);
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+protocolNameList = [{'EO1'} {'EC1'} {'G1'} {'M1'} {'G2'} {'EO2'} {'EC2'} {'M2'}];
+protocolPos = find(strcmp(protocolNameList,protocolName));
+
+if ~strcmp(refChoice,'none')
+    protocolPosRef = find(strcmp(protocolNameList,refChoice));
+else
+    protocolPosRef = [];
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Display options %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 displaySettings.fontSizeLarge = 10;
@@ -48,7 +61,8 @@ titleStr{2} = 'Controls';
 titleStr{3} = 'Med - Con';
 
 freqLims = axisRangeList{1};
-yLims = axisRangeList{2};
+%yLims = axisRangeList{2};
+yLims = [0 1.1];
 cLimsTopo = axisRangeList{3};
 capType = 'actiCap64_UOL';
 
@@ -96,6 +110,8 @@ end
 freqValsNoLineNoise = setdiff(freqVals, lineNoiseFreqVals); % removed bad frequency points. No line noise now.
 freqValsPosNoLineNoise = find(ismember(freqVals, freqValsNoLineNoise));
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Show Results %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[~,~,~] = psdOnTopOfPPC(subjectNameLists,badEyeCondition,badTrialVersion,stRange, protocolPos, protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffList,pairedDataFlag, hAllPlots, displayDataFlag);
+
 numElectrodeGroups = length(electrodeGroupList);
 
 connDataToReturn = cell(numElectrodeGroups,numFreqRanges);
@@ -103,17 +119,18 @@ connDataToReturn = cell(numElectrodeGroups,numFreqRanges);
 for i=1:numElectrodeGroups
 
     dataToPlot{1} = squeeze(connDataElectrodeGroup{1}(:,i,:));
-%     dataToPlot{1} = dataToPlot{1}(freqValsPosNoLineNoise); % don't plot line noise points
     dataToPlot{2} = squeeze(connDataElectrodeGroup{2}(:,i,:));
-%     dataToPlot{2} = dataToPlot{2}(freqValsPosNoLineNoise);
 
     if displayDataFlag
         % Connectivity as a function of frequency__________________
-        displayAndcompareData(hConn1(i),dataToPlot,freqVals,displaySettings,yLims,1,useMedianFlag,~pairedDataFlag);
+        displayAndcompareData(hConn1(i),dataToPlot,freqVals,displaySettings, yLims, 1,useMedianFlag,~pairedDataFlag);
         title(groupNameList{i});
         xlim(hConn1(i),freqLims);
+        if i==1
+        ylabel('PPC');
+        end
         for j=1:2
-            text(10,yLims(2)-0.1*j,[titleStr{j} '(' num2str(size(dataToPlot{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hConn1(i));
+            text(10,0.35-0.1*j,[titleStr{j} '(' num2str(size(dataToPlot{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hConn1(i));
             
         end
     end
@@ -172,23 +189,29 @@ for i=1:numFreqRanges
 
     dataToCompare = cell(1,2);
     % Topoplots_________
+   
     for j=1:3
-        x = squeeze(mean(connData{j}(:,:,freqPosList{i}),3));
-        if useMedianFlag
-            data = squeeze(median(x,1,'omitnan'));
-        else
-            data = squeeze(mean(x,1,'omitnan'));
+        if ~pairedDataFlag && j~=3 % not plottting the Med-Con diff (j) for unpaired case
+            x = squeeze(mean(connData{j}(:,:,freqPosList{i}),3, 'omitnan'));
+        elseif pairedDataFlag
+            x = squeeze(mean(connData{j}(:,:,freqPosList{i}),3, 'omitnan'));
+        else ; x=[];
         end
+            if useMedianFlag
+                data = squeeze(median(x,1,'omitnan'));
+            else
+                data = squeeze(mean(x,1,'omitnan'));
+            end
         
         topoplotDataToReturn{i,j} = data;
 
         if displayDataFlag
-            axes(hTopo(i,j)); %#ok<*LAXES>
-            topoplot(data,montageChanlocs,'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
-            %(.., 'maplimits',cLimsTopo,..)
-            if i==1
-            title(titleStr{j},'color',displaySettings.colorNames(j,:));
-            end
+                axes(hTopo(i,j)); %#ok<*LAXES>
+                topoplot(data,montageChanlocs,'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
+                %(.., 'maplimits',cLimsTopo,..)
+                if i==1
+                title(titleStr{j},'color',displaySettings.colorNames(j,:));
+                end
         end
 
         % Conn versus distance__________________
@@ -200,10 +223,11 @@ for i=1:numFreqRanges
 %     flipdataToCompare = flip(dataToCompare);
     displayAndcompareData(hConn3(i), dataToCompare, 1:numElectrodeGroups, displaySettings,yLims,1,useMedianFlag,~pairedDataFlag);
         if i==1
-        title('PPC vs cos(theta)');
+        title('PPC vs cos\theta');
        end
 end
 end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [connData,freqVals,connDataElectrodeGroup,electrodeGroupList,groupNameList,binnedCenters] = getConnDataAllSubjects(subjectNameLists,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,protocolName,analysisChoice,cutoffList,pairedDataFlag,saveFolderName,capType)
@@ -262,28 +286,38 @@ for i=1:2 % med and con
         end
     end
 end
+    % if paired dataset, take common bad subjects
+    if pairedDataFlag
+        badSubjectList{1} = union(find(badSubjectList{1}),find(badSubjectList{2}));
+        badSubjectList{2} = badSubjectList{1};
+    else 
+        for o=1:2
+            badSubjectList{o}= find(badSubjectList{o});
+        end
+    end
 
-% Remove bad subjects
+% Remove bad subjects ____
 connData = cell(1,3);
 connDataElectrodeGroup = cell(1,3);
 
-for i=1:2
-    if pairedDataFlag
-        badSubjectPos = find(sum(cell2mat(badSubjectList')));
-    else
-        badSubjectPos = find(badSubjectList{i});
-    end
-    x1 = connDataTMP{i};
-    x1(badSubjectPos)=[];
-    x2 = connDataElectrodeGroupTMP{i};
-    x2(badSubjectPos)=[];
+for q=1:2
+x1 = connDataTMP{q};
+x2 = connDataElectrodeGroupTMP{q};
+badSubjectPos = badSubjectList{q};
+badSubjectPos = badSubjectPos(badSubjectPos<=length(connDataTMP{q})); % coz sometimes the data of terminal subject might be ubsent in connDataTMP itself. 
+x1(badSubjectPos)=[];
+x2(badSubjectPos)=[];  
 
-    numSubjects = length(x1);
-    for j=1:numSubjects
-        connData{i}(j,:,:) = x1{j};
-        connDataElectrodeGroup{i}(j,:,:) = x2{j};
+numSubjects = length(x1);
+
+    for p=1:numSubjects
+        connData{q}(p,:,:) = x1{p};
+        connDataElectrodeGroup{q}(p,:,:) = x2{p};
     end
 end
-connData{3} = connData{1} - connData{2}; % diff: med-con
-connDataElectrodeGroup{3} = connDataElectrodeGroup{1} - connDataElectrodeGroup{2};
+
+    if pairedDataFlag 
+    connData{3} = connData{1} - connData{2}; % diff: med-con
+    connDataElectrodeGroup{3} = connDataElectrodeGroup{1} - connDataElectrodeGroup{2};
+    end
 end
